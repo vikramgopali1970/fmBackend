@@ -1,0 +1,45 @@
+{
+  "name": "server-mysql",
+  "version": "1.0.0",
+  "description": "NodeJs server with MySQL integration",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bin/www"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikramgopali1970/node-server-mysql.git"
+  },
+  "keywords": [
+    "node",
+    "mysql"
+  ],
+  "author": "Vikram Gopali",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vikramgopali1970/node-server-mysql/issues"
+  },
+  "homepage": "https://github.com/vikramgopali1970/node-server-mysql#readme",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "express-jwt": "^5.3.1",
+    "express-session": "^1.15.6",
+    "html-metadata": "git://github.com/wikimedia/html-metadata.git",
+    "jwt-simple": "^0.5.5",
+    "md5": "^2.2.1",
+    "moment": "^2.24.0",
+    "mongodb": "^3.1.13",
+    "morgan": "^1.9.1",
+    "mysql": "^2.16.0",
+    "passport": "^0.4.0",
+    "passport-jwt": "^4.0.0",
+    "passport-local": "^1.0.0",
+    "sentiment": "^5.0.1",
+    "timeseries-analysis": "^1.0.12",
+    "uuid": "^3.3.2",
+    "yelp-fusion": "^2.2.1"
+  }
+}
