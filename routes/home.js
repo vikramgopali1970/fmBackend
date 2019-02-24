@@ -67,6 +67,7 @@ module.exports = (router,sql,md5,moment,jwt)=>{
     });
 
     router.post('/getRetirementVal',(req,res,next)=> {
+        console.log("qwertyuio",req.body);
         let data = req.body;
         let findQ = {
             "userName":data.userName
@@ -74,16 +75,50 @@ module.exports = (router,sql,md5,moment,jwt)=>{
         let vals={
             postRetireYrs : parseInt(data.postRetireYrs),
             pension : parseInt(data.pension),
-            rate : parseFloat(data.rate)
+            rate : 0.06,
+            retirementAmt : parseInt(data.retirementAmt)
         };
         mongoUtil.getData(findQ,"user").then(dataGet=>{
             let savings = dataGet.savings;
-            console.log(`http://127.0.0.1:8890/getPV?rate=${vals.rate}&nper=${vals.postRetireYrs}&pmt=${vals.pension}&fv=0`);
+            console.log(`http://127.0.0.1:8890/getPV?rate=${vals.rate}&nper=${vals.postRetireYrs}&pmt=${vals.pension}&fv=${vals.retirementAmt}`);
             axios.get(`http://127.0.0.1:8890/getPV?rate=${vals.rate}&nper=${vals.postRetireYrs}&pmt=${vals.pension}&fv=0`).then(resp=>{
                 res.json({status:true,data:resp.data.pv});
             })
         });
 
+    });
+
+    router.post('/getUser',(req,res,next)=>{
+        let data = req.body;
+        let findQ = {
+            "userName":data.userName
+        };
+        mongoUtil.getData(findQ,"user").then(getdata=>{
+            res.json({status:true,data:getdata});
+        })
+    });
+
+    router.post('/remainingBudget',(req,res,next)=>{
+        let data = req.body;
+        let findQ = {
+            "userName":data.userName
+        };
+        mongoUtil.getData(findQ,currDb).then(getdata=>{
+            let sum = 0;
+            let keys = ["Miscellaneous",
+                "Money_Transfer",
+                "Bills",
+                "Food",
+                "Subscription",
+                "Shopping",
+                "Grocery",
+                "Travel",
+                "Vacation"];
+            keys.map(ele=>{
+                sum+=parseInt(getdata[ele]);
+            });
+            res.json({status:true,data:sum});
+        })
     });
 
     router.post('/addGoal',(req,res,next)=>{
@@ -93,9 +128,9 @@ module.exports = (router,sql,md5,moment,jwt)=>{
         };
         let goal = {
             goalName : data.goalName,
-            goalFuture : parseFloat(data.goalFuture),
+            goalFuture : parseInt(data.goalFuture),
             goalYears : parseInt(data.goalYears),
-            goalRate : parseFloat(data.goalRate)
+            goalRate : 0.1
         };
         console.log(`http://127.0.0.1:8890/getPMT?rate=${goal.goalRate}&nper=${goal.goalYears}&pv=0&fv=${goal.goalFuture}`);
         axios.get(`http://127.0.0.1:8890/getPMT?rate=${goal.goalRate}&nper=${goal.goalYears}&pv=0&fv=${goal.goalFuture}`).then(data=>{
@@ -163,7 +198,7 @@ module.exports = (router,sql,md5,moment,jwt)=>{
 
     router.post('/updateBudget',(req,res,next)=> {
         let data  = req.body;
-        let myobj = {$set:{
+        let myobj = {
                 "user_id" : 1,
                 "userName" : data.name,
                 "month" : data.month,
@@ -177,9 +212,9 @@ module.exports = (router,sql,md5,moment,jwt)=>{
                 "Grocery" : data.groc,
                 "Travel" : data.travel,
                 "Vacation" : data.vac
-            }};
+            };
         console.log(myobj);
-        mongoUtil.updateTable(myobj,{"userName" : data.userName},"currentBudget").then(data=>{
+        mongoUtil.updateTable(myobj,{"userName" : data.name},"currentBudget").then(data=>{
             res.json({status:"true",data:"updated"});
         });
     });
@@ -200,6 +235,73 @@ module.exports = (router,sql,md5,moment,jwt)=>{
         });
     });
 
+
+    router.post('/getMasterBudgetChart',(req,res,next)=> {
+        let data  = req.body;
+        let find = {
+            userName : data.name,
+        };
+        console.log(find);
+        mongoUtil.getData(find,"user").then(dataUser=>{
+            let expense = dataUser.expense;
+            mongoUtil.getData(find,"historyMaster").then(getData=>{
+                let keys = ["Miscellaneous",
+                    "Money_Transfer",
+                    "Bills",
+                    "Food",
+                    "Subscription",
+                    "Shopping",
+                    "Grocery",
+                    "Travel",
+                    "Vacation"];
+                let chart = keys.map((ele,i)=>{
+                    return {name : ele,y:parseFloat(getData[ele]/expense),}
+                });
+                console.log(chart);
+                res.json({status:true,data:chart});
+            }).catch(err=>{
+                res.json({status:false,msg:err});
+            });
+        });
+
+    });
+
+    router.post('/getCurrentBudgetChart',(req,res,next)=> {
+        let data  = req.body;
+        let find = {
+            userName : data.name,
+        };
+        console.log(find);
+        mongoUtil.getData(find,"user").then(dataUser=>{
+            let expense = dataUser.expense;
+            mongoUtil.getData(find,"historyMaster").then(getDataMas=>{
+                mongoUtil.getData(find,currDb).then(getDataCurr=>{
+                    let keys = ["Miscellaneous",
+                        "Money_Transfer",
+                        "Bills",
+                        "Food",
+                        "Subscription",
+                        "Shopping",
+                        "Grocery",
+                        "Travel",
+                        "Vacation"];
+                    let chart = keys.map((ele,i)=>{
+                        return [
+                            {name : "remaining",y:parseFloat(getDataCurr[ele]/getDataMas[ele])*100, color:"#6398D0"},
+                            {name : "Spent",y:100-parseFloat(getDataCurr[ele]/getDataMas[ele])*100, color:"#EE876F"}
+                        ]
+                    });
+                    console.log(chart);
+                    res.json({status:true,data:chart});
+                }).catch(err=>{
+                    res.json({status:false,msg:err});
+                });
+            }).catch(err=>{
+                res.json({status:false,msg:err});
+            });
+        });
+
+    });
 
 
     // router.post('/insertUser',(req,res,next)=> {
@@ -257,6 +359,22 @@ module.exports = (router,sql,md5,moment,jwt)=>{
     });
 
 
+    router.post('/finalChart',(req,res,next)=> {
+        let data  = req.body;
+        let find = {
+            userName : data.name,
+        };
+        mongoUtil.getData(find,"user").then(userData=>{
+            let savings = userData.savings;
+            mongoUtil.getData(find,"goals").then(goalData=>{
+                let reqSav = 0;
+                goalData.goals.map(goal=>{
+                    reqSav+=Math.abs(parseInt(goal.savings));
+                })
+                res.json({status:true,data:{savings,reqSav}});
+            })
+        })
+    });
 
     router.post('/setBudgetMaster',(req,res,next)=> {
         let data = req.body;
@@ -275,10 +393,37 @@ module.exports = (router,sql,md5,moment,jwt)=>{
             Travel: data.travel,
             Vacation: data.vac
         };
+        let findQ = {
+            "userName":data.name
+        };
+
         console.log(myobj);
         mongoUtil.insertData(myobj, "historyMaster").then(insData => {
             mongoUtil.insertData(myobj, "currentBudget").then(insData => {
-                res.json({status: true, data: "inserted"});
+                mongoUtil.getData(findQ,"historyMaster").then(getdata=>{
+                    let sum = 0;
+                    let keys = ["Miscellaneous",
+                        "Money_Transfer",
+                        "Bills",
+                        "Food",
+                        "Subscription",
+                        "Shopping",
+                        "Grocery",
+                        "Travel",
+                        "Vacation"];
+                    keys.map(ele=>{
+                        sum+=parseInt(getdata[ele]);
+                    });
+                    mongoUtil.getData(findQ,"user").then(userData=>{
+                        userData["expense"] = sum;
+                        console.log("lakakakka",userData);
+                        mongoUtil.updateTable(userData,findQ,"user").then(success=>{
+                            res.json({status:true,data:sum});
+                        });
+                    })
+
+                });
+                // res.json({status: true, data: "inserted"});
             }).catch(err => {
                 res.json({status: false, msg: err});
             });
@@ -286,10 +431,10 @@ module.exports = (router,sql,md5,moment,jwt)=>{
     });
 
     router.post('/reset',(req,res,next)=> {
-        // mongoUtil.resetTable("historyMaster");
-        // mongoUtil.resetTable("currentBudget");
+        mongoUtil.resetTable("historyMaster");
+        mongoUtil.resetTable("currentBudget");
         // mongoUtil.resetTable("user");
-        mongoUtil.resetTable("goals");
+        // mongoUtil.resetTable("goals");
         res.json({status : "USer_Authenticated"});
     });
 
